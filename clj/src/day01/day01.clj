@@ -1,6 +1,6 @@
 (require '[day01.location-list :as ll])
 
-(def test-file "src/day01/input.txt")
+(def test-file "data/day01/input.txt")
 
 (def location-lists
   (ll/parse-location-lists-file {:file-name test-file}))

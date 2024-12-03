@@ -7,7 +7,7 @@
     Pair up the smallest number in the left list with the smallest number in the right list, 
     then the second-smallest left number with the second-smallest right number, 
     and so on"
-    (let [location-lists (ll/parse-location-lists-file {:file-name "src/day01/test.txt"})]
+    (let [location-lists (ll/parse-location-lists-file {:file-name "data/day01/test.txt"})]
       (is (= {:location-lists [[3 4 2 1 3 3]
                                [4 3 5 3 9 3]]
               :total-distance 11}
@@ -15,7 +15,7 @@
               :total-distance (ll/total-distance {:location-lists location-lists})}))))
   (testing "total-similarity-score: adds up each number in the left list 
       after multiplying it by the number of times that number appears in the right list"
-    (let [location-lists (ll/parse-location-lists-file {:file-name "src/day01/test.txt"})]
+    (let [location-lists (ll/parse-location-lists-file {:file-name "data/day01/test.txt"})]
       (is (= {:location-lists [[3 4 2 1 3 3]
                                [4 3 5 3 9 3]]
               :total-similarity-score 31}

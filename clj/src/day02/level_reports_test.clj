@@ -30,7 +30,7 @@
              (lr/report-safe? {:level-report [8 6 4 4 1]}))
           "4 4 is neither a decrease or increase, safe by removing the third level, 4")))
   (testing "safe-reports-count"
-    (let [level-reports (lr/parse-level-reports-file {:file-name "src/day02/test.txt"})]
+    (let [level-reports (lr/parse-level-reports-file {:file-name "data/day02/test.txt"})]
       (is (= {:level-reports [[7 6 4 2 1]
                               [1 2 7 8 9]
                               [9 7 6 2 1]
