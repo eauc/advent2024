@@ -6,7 +6,7 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const lists = try lr.parseLevelReportsFile(allocator, "day02/input.txt");
+    const lists = try lr.parseLevelReportsFile(allocator, "data/day02/input.txt");
 
     std.debug.print("{}\n", .{lr.safeLevelReportsCount(lists)});
 }

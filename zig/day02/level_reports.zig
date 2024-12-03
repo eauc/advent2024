@@ -118,7 +118,7 @@ test safeLevelReportsCount {
 
     std.debug.print("day02/safeLevelReportsCount\n", .{});
     std.debug.print("\treading test input\n", .{});
-    const levelReports = try parseLevelReportsFile(allocator, "day02/test.txt");
+    const levelReports = try parseLevelReportsFile(allocator, "data/day02/test.txt");
     try std.testing.expectEqualDeep(
         &[_][]const Level{
             &[_]Level{ 7, 6, 4, 2, 1 },

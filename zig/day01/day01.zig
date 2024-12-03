@@ -6,7 +6,7 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const lists = try ll.parseLocationListsFile(allocator, "day01/input.txt");
+    const lists = try ll.parseLocationListsFile(allocator, "data/day01/input.txt");
 
     const total_distance = ll.totalDistance(lists);
     std.debug.print("total_distance: {}\n", .{total_distance});
