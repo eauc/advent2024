@@ -5,7 +5,7 @@ const {
   reportIsSafe,
 } = require('./levelReports');
 
-describe('levelReports', () => {
+describe('day02/levelReports', () => {
   describe('reportIsSafe', () => {
     it(`a report only counts as safe if both of the following are true:
     - The levels are either all increasing or all decreasing.
@@ -54,7 +54,7 @@ describe('levelReports', () => {
     - The levels are either all increasing or all decreasing.
     - Any two adjacent levels differ by at least one and at most three.`, () => {
       const { levelReports } = parseLevelReportsFile({
-        fileName: 'day02/test.txt',
+        fileName: 'data/day02/test.txt',
       });
       expect({ levelReports }).to.eql({
         levelReports: [

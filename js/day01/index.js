@@ -7,7 +7,7 @@ const {
 
 (function main() {
   const { locationLists } = parseLocationListsFile({
-    fileName: 'day01/input.txt',
+    fileName: 'data/day01/input.txt',
   });
   inspect({
     totalDistance: totalDistance({ locationLists }),

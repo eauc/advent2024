@@ -5,14 +5,14 @@ const {
   totalSimilarityScore,
 } = require('./locationList');
 
-describe('day01', () => {
+describe('day01/locationList', () => {
   describe('total distance', () => {
     it(`pairs up the numbers and measures how far apart they are. 
     Pair up the smallest number in the left list with the smallest number in the right list, 
     then the second-smallest left number with the second-smallest right number, 
     and so on`, () => {
       const { locationLists } = parseLocationListsFile({
-        fileName: 'day01/test.txt',
+        fileName: 'data/day01/test.txt',
       });
       expect({ locationLists }).to.eql({
         locationLists: [
@@ -33,7 +33,7 @@ describe('day01', () => {
     it(`adds up each number in the left list 
       after multiplying it by the number of times that number appears in the right list`, () => {
       const { locationLists } = parseLocationListsFile({
-        fileName: 'day01/test.txt',
+        fileName: 'data/day01/test.txt',
       });
       expect({ locationLists }).to.eql({
         locationLists: [
