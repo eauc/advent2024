@@ -50,4 +50,25 @@ pub fn build(b: *std.Build) void {
     });
     const run_day02_tests = b.addRunArtifact(day02_tests);
     test_step.dependOn(&run_day02_tests.step);
+
+    const day03_exe = b.addExecutable(.{
+        .name = "day03",
+        .root_source_file = b.path("day03/day03.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const run_day03_cmd = b.addRunArtifact(day03_exe);
+    if (b.args) |args| {
+        run_day03_cmd.addArgs(args);
+    }
+    const run_day03_step = b.step("day03", "Run day03");
+    run_day03_step.dependOn(&run_day03_cmd.step);
+
+    const day03_tests = b.addTest(.{
+        .root_source_file = b.path("day03/program_memory.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const run_day03_tests = b.addRunArtifact(day03_tests);
+    test_step.dependOn(&run_day03_tests.step);
 }
