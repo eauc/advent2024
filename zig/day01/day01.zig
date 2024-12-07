@@ -13,3 +13,7 @@ pub fn main() !void {
     const total_similarity_score = try ll.totalSimilarityScore(allocator, lists);
     std.debug.print("total_similarity_score: {}\n", .{total_similarity_score});
 }
+
+test {
+    _ = std.testing.refAllDecls(@This());
+}

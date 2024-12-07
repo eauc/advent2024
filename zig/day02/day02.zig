@@ -10,3 +10,7 @@ pub fn main() !void {
 
     std.debug.print("{}\n", .{lr.safeLevelReportsCount(lists)});
 }
+
+test {
+    _ = std.testing.refAllDecls(@This());
+}

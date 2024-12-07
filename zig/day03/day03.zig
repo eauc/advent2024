@@ -11,3 +11,7 @@ pub fn main() !void {
     const sum = lr.sumInstructions(instructions);
     std.debug.print("{{ sum = {d} }}\n", .{sum});
 }
+
+test {
+    _ = std.testing.refAllDecls(@This());
+}
