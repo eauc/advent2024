@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) !void {
     const test_step = b.step("test", "Run unit tests");
 
     var file_name_buf: [100]u8 = undefined;
-    for ([_][]const u8{ "day01", "day02", "day03", "day04", "day05", "day06", "day07" }) |day| {
+    for ([_][]const u8{ "day01", "day02", "day03", "day04", "day05", "day06", "day07", "day08" }) |day| {
         const root_file = try std.fmt.bufPrint(&file_name_buf, "{s}/{s}.zig", .{ day, day });
         const exe = b.addExecutable(.{
             .name = day,
