@@ -5,7 +5,8 @@
          'day03.program-memory-test
          'day04.word-search-test
          'day05.safety-manual-updates-test
-         'day06.guard-map-test)
+         'day06.guard-map-test
+         'day07.bridge-operations-test)
 
 (def test-results
   (t/run-tests 'day01.location-list-test
@@ -13,7 +14,8 @@
                'day03.program-memory-test
                'day04.word-search-test
                'day05.safety-manual-updates-test
-               'day06.guard-map-test))
+               'day06.guard-map-test
+               'day07.bridge-operations-test))
 
 (let [{:keys [fail error]} test-results]
   (when (pos? (+ fail error))
