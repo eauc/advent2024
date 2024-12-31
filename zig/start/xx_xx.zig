@@ -18,9 +18,7 @@ pub fn parseXXFile(allocator: std.mem.Allocator, file_name: []const u8) !void {
 }
 
 test parseXXFile {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+    const allocator = std.testing.allocator;
 
     std.debug.print("dayXX/parseXXFile\n", .{});
     std.debug.print("\tread input file\n", .{});

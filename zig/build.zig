@@ -32,6 +32,7 @@ pub fn build(b: *std.Build) !void {
         "day19",
         "day20",
         "day21",
+        "day22",
     }) |day| {
         const root_file = try std.fmt.bufPrint(&file_name_buf, "{s}/{s}.zig", .{ day, day });
         const exe = b.addExecutable(.{
