@@ -7,6 +7,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const docs_step = b.step("docs", "Generate docs");
     const test_step = b.step("test", "Run unit tests");
 
     var file_name_buf: [100]u8 = undefined;
@@ -57,5 +58,12 @@ pub fn build(b: *std.Build) !void {
         });
         const run_tests = b.addRunArtifact(tests);
         test_step.dependOn(&run_tests.step);
+
+        const install_docs = b.addInstallDirectory(.{
+            .source_dir = tests.getEmittedDocs(),
+            .install_dir = .{ .custom = "../docs" },
+            .install_subdir = "day01",
+        });
+        docs_step.dependOn(&install_docs.step);
     }
 }
