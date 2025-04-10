@@ -6,11 +6,15 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const lists = try lr.parseLevelReportsFile(allocator, "data/day02/input.txt");
+    const lists = try lr.parseLevelReportsFile(allocator, "day02/input.txt");
+    const report = lr.safeLevelReportsCount(lists);
 
-    std.debug.print("{}\n", .{lr.safeLevelReportsCount(lists)});
+    std.debug.print("{}\n", .{report});
+    try std.testing.expectEqual(308, report.safe_reports);
 }
 
 test {
-    _ = std.testing.refAllDecls(@This());
+    comptime {
+        std.testing.refAllDecls(@This());
+    }
 }
