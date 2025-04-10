@@ -62,7 +62,7 @@ pub fn build(b: *std.Build) !void {
         const install_docs = b.addInstallDirectory(.{
             .source_dir = tests.getEmittedDocs(),
             .install_dir = .{ .custom = "../docs" },
-            .install_subdir = "day01",
+            .install_subdir = day,
         });
         docs_step.dependOn(&install_docs.step);
     }
