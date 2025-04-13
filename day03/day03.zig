@@ -6,10 +6,12 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const programMemory = try lr.parseProgramMemoryFile(allocator, "data/day03/input.txt");
-    const instructions = try lr.parseAllInstructions(allocator, programMemory);
+    const programMemory = try lr.parseProgramMemoryFile(allocator, "day03/input.txt");
+    const instructions = lr.parseAllInstructions(allocator, programMemory);
     const sum = lr.sumInstructions(instructions);
+
     std.debug.print("{{ sum = {d} }}\n", .{sum});
+    try std.testing.expectEqual(127092535, sum);
 }
 
 test {
