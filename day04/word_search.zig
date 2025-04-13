@@ -1,6 +1,82 @@
+//! --- Day 4: Ceres Search ---
+//! "Looks like the Chief's not here. Next!" One of The Historians pulls out a device and pushes the only button on it. After a brief flash, you recognize the interior of the Ceres monitoring station!
+//!
+//! As the search for the Chief continues, a small Elf who lives on the station tugs on your shirt; she'd like to know if you could help her with her word search (your puzzle input). She only has to find one word: XMAS.
+//!
+//! This word search allows words to be horizontal, vertical, diagonal, written backwards, or even overlapping other words. It's a little unusual, though, as you don't merely need to find one instance of XMAS - you need to find all of them. Here are a few ways XMAS might appear, where irrelevant characters have been replaced with .:
+//!
+//! ```
+//! ..X...
+//! .SAMX.
+//! .A..A.
+//! XMAS.S
+//! .X....
+//! ```
+//!
+//! The actual word search will be full of letters instead. For example:
+//! ```
+//! MMMSXXMASM
+//! MSAMXMSMSA
+//! AMXSXMAAMM
+//! MSAMASMSMX
+//! XMASAMXAMM
+//! XXAMMXXAMA
+//! SMSMSASXSS
+//! SAXAMASAAA
+//! MAMMMXMMMM
+//! MXMXAXMASX
+//! ```
+//! In this word search, XMAS occurs a total of 18 times; here's the same word search again, but where letters not involved in any XMAS have been replaced with .:
+//! ```
+//! ....XXMAS.
+//! .SAMXMS...
+//! ...S..A...
+//! ..A.A.MS.X
+//! XMASAMX.MM
+//! X.....XA.A
+//! S.S.S.S.SS
+//! .A.A.A.A.A
+//! ..M.M.M.MM
+//! .X.X.XMASX
+//! ```
+//!
+//! The Elf looks quizzically at you. Did you misunderstand the assignment?
+//!
+//! Looking for the instructions, you flip over the word search to find that this isn't actually an XMAS puzzle; it's an X-MAS puzzle in which you're supposed to find two MAS in the shape of an X. One way to achieve that is like this:
+//! ```
+//! M.S
+//! .A.
+//! M.S
+//! ```
+//! Irrelevant characters have again been replaced with . in the above diagram. Within the X, each MAS can be written forwards or backwards.
+//!
+//! Here's the same example from before, but this time all of the X-MASes have been kept instead:
+//! ```
+//! .M.S......
+//! ..A..MSMS.
+//! .M.S.MAA..
+//! ..A.ASMSM.
+//! .M.S.M....
+//! ..........
+//! S.S.S.S.S.
+//! .A.A.A.A..
+//! M.M.M.M.M.
+//! ..........
+//! ```
+//! In this example, an X-MAS appears 9 times.
 const std = @import("std");
 
-const WordSearchLines = [][]const u8;
+const WordSearchLines = struct {
+    allocator: std.mem.Allocator,
+    lines: [][]u8,
+    pub fn deinit(self: WordSearchLines) void {
+        for (self.lines) |line| {
+            self.allocator.free(line);
+        }
+        self.allocator.free(self.lines);
+    }
+};
+
 pub fn parseWordSearchFile(allocator: std.mem.Allocator, file_name: []const u8) !WordSearchLines {
     const file = try std.fs.cwd().openFile(file_name, .{});
     defer file.close();
@@ -13,23 +89,24 @@ pub fn parseWordSearchFile(allocator: std.mem.Allocator, file_name: []const u8) 
 
     var lineBuf: [1024]u8 = undefined;
     while (try in_stream.readUntilDelimiterOrEof(&lineBuf, '\n')) |readLineBuf| {
-        const line = try allocator.alloc(u8, readLineBuf.len);
+        const line = allocator.alloc(u8, readLineBuf.len) catch unreachable;
         std.mem.copyForwards(u8, line, readLineBuf);
 
-        try linesList.append(line);
+        linesList.append(line) catch unreachable;
     }
-    return linesList.toOwnedSlice();
+    return .{
+        .allocator = allocator,
+        .lines = linesList.toOwnedSlice() catch unreachable,
+    };
 }
 
 test parseWordSearchFile {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+    const allocator = std.testing.allocator;
 
-    std.debug.print("day04/parseWordSearchFile\n", .{});
-    std.debug.print("\tread test input file\n", .{});
-    const word_search_lines = try parseWordSearchFile(allocator, "data/day04/test.txt");
-    try std.testing.expectEqual(10, word_search_lines.len);
+    var word_search_lines = try parseWordSearchFile(allocator, "day04/test.txt");
+    defer word_search_lines.deinit();
+
+    try std.testing.expectEqual(10, word_search_lines.lines.len);
     try std.testing.expectEqualDeep(&[_][]const u8{
         "MMMSXXMASM",
         "MSAMXMSMSA",
@@ -41,7 +118,7 @@ test parseWordSearchFile {
         "SAXAMASAAA",
         "MAMMMXMMMM",
         "MXMXAXMASX",
-    }, word_search_lines);
+    }, word_search_lines.lines);
 }
 
 const CharPosition = struct {
@@ -57,35 +134,52 @@ const Occurence = struct {
     charPositions: []CharPosition,
 };
 
-pub fn findWordOccurenceInDirection(word_search_lines: WordSearchLines, word: []const u8, direction: OccurenceDirection, charPositionsBuf: []CharPosition) bool {
-    const row = charPositionsBuf[0].row;
-    const col = charPositionsBuf[0].col;
+/// Checks if `word` is found in `word_search_lines` in direction `direction` starting from `charPositionsBuf[0]`.
+/// Fills `charPositionsBuf` with the positions of the found word characters.
+pub fn findWordOccurenceInDirection(
+    allocator: std.mem.Allocator,
+    word_search_lines: WordSearchLines,
+    word: []const u8,
+    direction: OccurenceDirection,
+    start: CharPosition,
+) error{NotFound}![]CharPosition {
+    const row = start.row;
+    const col = start.col;
+    const lines = word_search_lines.lines;
+    // Checks if `word` can fit within `word_search_lines`
     switch (direction) {
-        .RIGHT => if (col + word.len > word_search_lines[row].len) {
-            return false;
+        .RIGHT => if (col + word.len > lines[row].len) {
+            return error.NotFound;
         },
         .LEFT => if (col + 1 < word.len) {
-            return false;
+            return error.NotFound;
         },
-        .DOWN => if (row + word.len > word_search_lines.len) {
-            return false;
+        .DOWN => if (row + word.len > lines.len) {
+            return error.NotFound;
         },
         .UP => if (row + 1 < word.len) {
-            return false;
+            return error.NotFound;
         },
-        .RIGHT_DOWN => if (row + word.len > word_search_lines.len or col + word.len > word_search_lines[row].len) {
-            return false;
+        .RIGHT_DOWN => if (row + word.len > lines.len or col + word.len > lines[row].len) {
+            return error.NotFound;
         },
-        .RIGHT_UP => if (row + 1 < word.len or col + word.len > word_search_lines[row].len) {
-            return false;
+        .RIGHT_UP => if (row + 1 < word.len or col + word.len > lines[row].len) {
+            return error.NotFound;
         },
         .LEFT_UP => if (row + 1 < word.len or col + 1 < word.len) {
-            return false;
+            return error.NotFound;
         },
-        .LEFT_DOWN => if (row + word.len > word_search_lines.len or col + 1 < word.len) {
-            return false;
+        .LEFT_DOWN => if (row + word.len > lines.len or col + 1 < word.len) {
+            return error.NotFound;
         },
     }
+
+    var charPositionsBuf = allocator.alloc(CharPosition, word.len) catch unreachable;
+    errdefer allocator.free(charPositionsBuf);
+    charPositionsBuf[0] = start;
+
+    // Loops over each character in `word` and see if it's found in the correct `direction` starting from `charPositionsBuf[0]`
+    // if it is found, adds the character position to `charPositionsBuf`
     for (1..word.len) |i| {
         const next_pos: struct {
             row: usize,
@@ -100,46 +194,51 @@ pub fn findWordOccurenceInDirection(word_search_lines: WordSearchLines, word: []
             .LEFT_UP => .{ .row = row - i, .col = col - i },
             .LEFT_DOWN => .{ .row = row + i, .col = col - i },
         };
-        if (word_search_lines[next_pos.row][next_pos.col] == word[i]) {
-            charPositionsBuf[i] = CharPosition{ .row = next_pos.row, .col = next_pos.col, .char = word[i] };
-        } else {
-            return false;
+        if (lines[next_pos.row][next_pos.col] != word[i]) {
+            return error.NotFound;
         }
-    } else return true;
+        charPositionsBuf[i] = CharPosition{
+            .row = next_pos.row,
+            .col = next_pos.col,
+            .char = word[i],
+        };
+    }
+    return charPositionsBuf;
 }
 
-pub fn findWordOccurences(allocator: std.mem.Allocator, word_search_lines: WordSearchLines, word: []const u8) ![]Occurence {
-    var charPositionsBuf = try allocator.alloc(CharPosition, word.len);
-    defer allocator.free(charPositionsBuf);
-
+/// Finds all occurences of `word` in `word_search_lines` in all directions
+pub fn findWordOccurences(allocator: std.mem.Allocator, word_search_lines: WordSearchLines, word: []const u8) []Occurence {
     var occurences = std.ArrayList(Occurence).init(allocator);
     defer occurences.deinit();
 
-    for (word_search_lines, 0..) |line, row| {
+    for (word_search_lines.lines, 0..) |line, row| {
         for (line, 0..) |char, col| {
             if (char == word[0]) {
-                charPositionsBuf[0] = CharPosition{ .row = row, .col = col, .char = word[0] };
                 for ([_]OccurenceDirection{ .RIGHT, .LEFT, .DOWN, .UP, .RIGHT_DOWN, .RIGHT_UP, .LEFT_UP, .LEFT_DOWN }) |direction| {
-                    const word_found = findWordOccurenceInDirection(word_search_lines, word, direction, charPositionsBuf);
-                    if (word_found) {
-                        const charPositions = try allocator.alloc(CharPosition, word.len);
-                        std.mem.copyForwards(CharPosition, charPositions, charPositionsBuf);
-                        try occurences.append(Occurence{
-                            .direction = direction,
-                            .charPositions = charPositions,
-                        });
-                    }
+                    const start = CharPosition{ .row = row, .col = col, .char = word[0] };
+                    const char_positions = findWordOccurenceInDirection(allocator, word_search_lines, word, direction, start) catch |err| switch (err) {
+                        error.NotFound => continue,
+                    };
+                    occurences.append(Occurence{ .direction = direction, .charPositions = char_positions }) catch unreachable;
                 }
             }
         }
     }
-    return occurences.toOwnedSlice();
+    return occurences.toOwnedSlice() catch unreachable;
 }
 
-pub fn wordOccurencesToStrings(allocator: std.mem.Allocator, word_search_lines: WordSearchLines, occurences: []const Occurence) ![][]const u8 {
-    const strings = try allocator.alloc([]u8, word_search_lines.len);
-    for (word_search_lines, 0..) |line, row| {
-        const string = try allocator.alloc(u8, line.len);
+fn freeOccurences(allocator: std.mem.Allocator, occurences: []Occurence) void {
+    for (occurences) |occurence| {
+        allocator.free(occurence.charPositions);
+    }
+    allocator.free(occurences);
+}
+
+// Returns a copy of `word_search_lines` with the characters not found in `occurences` replaced by `.`
+pub fn wordOccurencesToStrings(allocator: std.mem.Allocator, word_search_lines: WordSearchLines, occurences: []const Occurence) [][]u8 {
+    const strings = allocator.alloc([]u8, word_search_lines.lines.len) catch unreachable;
+    for (word_search_lines.lines, 0..) |line, row| {
+        const string = allocator.alloc(u8, line.len) catch unreachable;
         for (line, 0..) |char, col| {
             string[col] = find: for (occurences) |occurence| {
                 for (occurence.charPositions) |charPosition| {
@@ -154,19 +253,25 @@ pub fn wordOccurencesToStrings(allocator: std.mem.Allocator, word_search_lines: 
     return strings;
 }
 
-test findWordOccurences {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+fn freeStrings(allocator: std.mem.Allocator, strings: [][]u8) void {
+    for (strings) |string| {
+        allocator.free(string);
+    }
+    allocator.free(strings);
+}
 
-    std.debug.print("day04/findWordOccurences\n", .{});
-    std.debug.print("\tThis word search allows words to be horizontal, vertical, diagonal, written backwards, or even overlapping other words.\n", .{});
-    std.debug.print("\t- read test input file\n", .{});
-    const word_search_lines = try parseWordSearchFile(allocator, "data/day04/test.txt");
-    std.debug.print("\t- findWordOccurences\n", .{});
-    const occurences = try findWordOccurences(allocator, word_search_lines, "XMAS");
-    try std.testing.expectEqual(18, occurences.len);
-    const strings = try wordOccurencesToStrings(allocator, word_search_lines, occurences);
+test findWordOccurences {
+    const allocator = std.testing.allocator;
+
+    var word_search_lines = try parseWordSearchFile(allocator, "day04/test.txt");
+    defer word_search_lines.deinit();
+
+    const occurences = findWordOccurences(allocator, word_search_lines, "XMAS");
+    defer freeOccurences(allocator, occurences);
+
+    const strings = wordOccurencesToStrings(allocator, word_search_lines, occurences);
+    defer freeStrings(allocator, strings);
+
     for ([_][]const u8{
         "....XXMAS.",
         ".SAMXMS...",
@@ -179,51 +284,62 @@ test findWordOccurences {
         "..M.M.M.MM",
         ".X.X.XMASX",
     }, 0..) |expected, row| {
-        std.debug.print("\t.comparing row {d}\n", .{row});
         try std.testing.expectEqualStrings(expected, strings[row]);
     }
 }
 
-pub fn findCrossedWordOccurences(allocator: std.mem.Allocator, word_search_lines: WordSearchLines, word: []const u8, cross_index: usize) ![]Occurence {
-    const word_occurences = try findWordOccurences(allocator, word_search_lines, word);
+// Finds crossed-word occurrences of `word` in `word_search_lines`, crossed at character index `cross_index`
+pub fn findCrossedWordOccurences(allocator: std.mem.Allocator, word_search_lines: WordSearchLines, word: []const u8, cross_index: usize) []Occurence {
+    const word_occurences = findWordOccurences(allocator, word_search_lines, word);
+    defer freeOccurences(allocator, word_occurences);
+
     var cross_occurences_list = std.ArrayList(Occurence).init(allocator);
     defer cross_occurences_list.deinit();
+
     for (word_occurences, 0..) |occurence, current_index| {
+        // vertical or horizontal occurences cannot be part of crossed words
         switch (occurence.direction) {
             .RIGHT, .LEFT, .UP, .DOWN => continue,
             else => {},
         }
         const char_position = occurence.charPositions[cross_index];
+        // look for another occurence of word with the same character in the same position, and in a diagonal direction
         const found = for (word_occurences, 0..) |other_occurence, i| {
+            // skip over the current occurence
             if (i == current_index) continue;
+            // vertical or horizontal occurences cannot be part of crossed words
             switch (other_occurence.direction) {
                 .RIGHT, .LEFT, .UP, .DOWN => continue,
                 else => {},
             }
-            if (char_position.row == other_occurence.charPositions[cross_index].row and char_position.col == other_occurence.charPositions[cross_index].col) {
+            if (char_position.row == other_occurence.charPositions[cross_index].row and
+                char_position.col == other_occurence.charPositions[cross_index].col)
+            {
                 break true;
             }
         } else false;
         if (found) {
-            try cross_occurences_list.append(occurence);
+            const cross_occurence = Occurence{
+                .direction = occurence.direction,
+                .charPositions = allocator.dupe(CharPosition, occurence.charPositions) catch unreachable,
+            };
+            cross_occurences_list.append(cross_occurence) catch unreachable;
         }
     }
-    return cross_occurences_list.toOwnedSlice();
+    return cross_occurences_list.toOwnedSlice() catch unreachable;
 }
 
 test findCrossedWordOccurences {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+    const allocator = std.testing.allocator;
 
-    std.debug.print("day04/findWordOccurences\n", .{});
-    std.debug.print("\tThis word search allows words to be horizontal, vertical, diagonal, written backwards, or even overlapping other words.\n", .{});
-    std.debug.print("\t- read test input file\n", .{});
-    const word_search_lines = try parseWordSearchFile(allocator, "data/day04/test.txt");
-    std.debug.print("\t- findWordOccurences\n", .{});
-    const occurences = try findCrossedWordOccurences(allocator, word_search_lines, "MAS", 1);
-    try std.testing.expectEqual(18, occurences.len);
-    const strings = try wordOccurencesToStrings(allocator, word_search_lines, occurences);
+    var word_search_lines = try parseWordSearchFile(allocator, "day04/test.txt");
+    defer word_search_lines.deinit();
+
+    const occurences = findCrossedWordOccurences(allocator, word_search_lines, "MAS", 1);
+    defer freeOccurences(allocator, occurences);
+
+    const strings = wordOccurencesToStrings(allocator, word_search_lines, occurences);
+    defer freeStrings(allocator, strings);
     for ([_][]const u8{
         ".M.S......",
         "..A..MSMS.",
@@ -236,8 +352,6 @@ test findCrossedWordOccurences {
         "M.M.M.M.M.",
         "..........",
     }, 0..) |expected, row| {
-        // std.debug.print("\t{s}\t{s}\n", .{ strings[row], expected });
-        std.debug.print("\t.comparing row {d}\n", .{row});
         try std.testing.expectEqualStrings(expected, strings[row]);
     }
 }
